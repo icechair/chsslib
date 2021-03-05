@@ -13,7 +13,7 @@ pub enum Square {
     A1, B1, C1, D1, E1, F1, G1, H1,
 }
 
-fn id(rank: u64, file: u64) -> u64 {
+pub fn id(rank: u64, file: u64) -> u64 {
     rank * 8 + file
 }
 

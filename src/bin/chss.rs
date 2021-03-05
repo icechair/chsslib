@@ -1,3 +1,7 @@
+use chsslib::*;
+
 fn main() {
-    println!("Hello, world!");
+    let board = Board::new();
+
+    print!("{}", board);
 }
