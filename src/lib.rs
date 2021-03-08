@@ -1,15 +1,39 @@
 pub mod bitboard;
+pub mod piece;
 pub use bitboard::Bitboard;
+pub use bitboard::Square;
+pub use piece::Piece;
 use std::fmt;
 
-pub enum Piece {
-    Empty,
-    Pawn(bool),
-    Rook(bool),
-    Knight(bool),
-    Bishop(bool),
-    Queen(bool),
-    King(bool),
+pub struct Castling(u8);
+impl Castling {
+    pub fn new(v: u8) -> Self {
+        return Self(v);
+    }
+    pub fn can_white_king(&self) -> bool {
+        self.0 & 1 == 1
+    }
+    pub fn set_white_king(&mut self) {
+        self.0 |= 1
+    }
+    pub fn can_white_queen(&self) -> bool {
+        self.0 & 2 == 2
+    }
+    pub fn set_white_queen(&mut self) {
+        self.0 |= 2
+    }
+    pub fn can_black_king(&self) -> bool {
+        self.0 & 4 == 4
+    }
+    pub fn set_black_king(&mut self) {
+        self.0 |= 4
+    }
+    pub fn can_black_queen(&self) -> bool {
+        self.0 & 8 == 8
+    }
+    pub fn set_black_queen(&mut self) {
+        self.0 |= 8
+    }
 }
 
 pub struct Board {
@@ -21,6 +45,11 @@ pub struct Board {
     bishops: Bitboard,
     queens: Bitboard,
     kings: Bitboard,
+    white_active: bool,
+    castling: Castling,
+    en_passant: Bitboard,
+    halfmove: u64,
+    fullmove: u64,
 }
 
 impl Board {
@@ -34,6 +63,11 @@ impl Board {
             bishops: Bitboard::new(0),
             queens: Bitboard::new(0),
             kings: Bitboard::new(0),
+            white_active: true,
+            castling: Castling::new(0),
+            en_passant: Bitboard::new(0),
+            halfmove: 0,
+            fullmove: 1,
         }
     }
 
@@ -149,6 +183,50 @@ impl Board {
             }
         }
 
+        match parts[1] {
+            "w" => board.white_active = true,
+            "b" => board.white_active = false,
+            _ => {
+                return Err(format!("wrong character in active: {}", parts[1]));
+            }
+        }
+
+        if parts[2].contains("k") {
+            board.castling.set_black_king()
+        }
+        if parts[2].contains("K") {
+            board.castling.set_white_king()
+        }
+        if parts[2].contains("q") {
+            board.castling.set_black_queen()
+        }
+        if parts[2].contains("Q") {
+            board.castling.set_white_queen()
+        }
+
+        match parts[3] {
+            "-" => (),
+            sq => {
+                let square = Square::parse(sq);
+                match square {
+                    Ok(s) => board.en_passant.toggle_bit(s),
+                    Err(e) => {
+                        return Err(format!("invalid en_passant part: {}, err({})", parts[3], e))
+                    }
+                }
+            }
+        }
+        if let Ok(halfmove) = parts[4].parse::<u64>() {
+            board.halfmove = halfmove;
+        } else {
+            return Err(format!("invald halfmove: {}", parts[4]));
+        }
+        if let Ok(fullmove) = parts[5].parse::<u64>() {
+            board.fullmove = fullmove;
+        } else {
+            return Err(format!("invald fullmove: {}", parts[5]));
+        }
+
         Ok(board)
     }
 }
@@ -159,21 +237,7 @@ impl fmt::Display for Board {
         for rank in (0..8).rev() {
             write!(f, "{} ", rank + 1)?;
             for file in 0..8 {
-                let piece = match self.get_piece(rank, file) {
-                    Piece::Empty => '.',
-                    Piece::Pawn(true) => 'P',
-                    Piece::Pawn(false) => 'p',
-                    Piece::Rook(true) => 'R',
-                    Piece::Rook(false) => 'r',
-                    Piece::Knight(true) => 'N',
-                    Piece::Knight(false) => 'n',
-                    Piece::Bishop(true) => 'B',
-                    Piece::Bishop(false) => 'b',
-                    Piece::Queen(true) => 'Q',
-                    Piece::Queen(false) => 'q',
-                    Piece::King(true) => 'K',
-                    Piece::King(false) => 'k',
-                };
+                let piece = self.get_piece(rank, file);
                 write!(f, "{} ", piece)?;
             }
             write!(f, "\n")?;
@@ -189,21 +253,7 @@ impl fmt::Debug for Board {
         for rank in (0..8).rev() {
             write!(f, "{} ", rank + 1)?;
             for file in 0..8 {
-                let piece = match self.get_piece(rank, file) {
-                    Piece::Empty => '.',
-                    Piece::Pawn(true) => 'P',
-                    Piece::Pawn(false) => 'p',
-                    Piece::Rook(true) => 'R',
-                    Piece::Rook(false) => 'r',
-                    Piece::Knight(true) => 'N',
-                    Piece::Knight(false) => 'n',
-                    Piece::Bishop(true) => 'B',
-                    Piece::Bishop(false) => 'b',
-                    Piece::Queen(true) => 'Q',
-                    Piece::Queen(false) => 'q',
-                    Piece::King(true) => 'K',
-                    Piece::King(false) => 'k',
-                };
+                let piece = self.get_piece(rank, file);
                 write!(f, "{} ", piece)?;
             }
             write!(f, "\n")?;
@@ -238,7 +288,7 @@ mod tests {
                 assert_eq!(board.knights, Bitboard::new(4755801206503243842));
                 assert_eq!(board.bishops, Bitboard::new(2594073385365405732));
                 assert_eq!(board.queens, Bitboard::new(576460752303423496));
-                assert_eq!(board.kings, Bitboard::new(1152921504606846992));
+                assert_eq!(board.kings, Bitboard::new(576460752303423496));
             }
             Err(_) => assert!(false),
         }

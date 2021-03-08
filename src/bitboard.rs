@@ -13,6 +13,26 @@ pub enum Square {
     A1, B1, C1, D1, E1, F1, G1, H1,
 }
 
+impl Square {
+    pub fn parse(exp: &str) -> Result<u64, String> {
+        if exp.len() != 2 {
+            return Err(format!("invalid expression: {}", exp));
+        }
+        let chars: Vec<char> = exp.chars().collect();
+        let file = (chars[0].to_ascii_lowercase() as i32) - ('a' as i32);
+        if file > 7 || file < 0 {
+            return Err(format!("invalid file in expression: {}", exp));
+        }
+        if let Some(rank) = chars[1].to_digit(10) {
+            if rank > 8 || file < 1 {
+                return Err(format!("invalid rank in expression: {}", exp));
+            }
+            return Ok(id(rank as u64, file as u64));
+        }
+        Ok(0)
+    }
+}
+
 pub fn id(rank: u64, file: u64) -> u64 {
     rank * 8 + file
 }
