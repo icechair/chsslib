@@ -17,7 +17,7 @@ pub fn id(rank: u64, file: u64) -> u64 {
     rank * 8 + file
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy)]
 pub struct Bitboard(u64);
 
 impl Bitboard {
@@ -33,6 +33,20 @@ impl Bitboard {
 }
 
 impl fmt::Display for Bitboard {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Bitboard({})\n", self.0)?;
+        for rank in (0..8).rev() {
+            write!(f, "{} ", rank + 1)?;
+            for file in 0..8 {
+                write!(f, "{} ", self.bit(id(rank, file)))?;
+            }
+            write!(f, "\n")?;
+        }
+        write!(f, "  a b c d e f g h")?;
+        Ok(())
+    }
+}
+impl fmt::Debug for Bitboard {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Bitboard({})\n", self.0)?;
         for rank in (0..8).rev() {

@@ -63,14 +63,14 @@ impl Board {
         Piece::Empty
     }
 
-    pub fn parse(fen: &str) -> Result<Self, &str> {
+    pub fn parse(fen: &str) -> Result<Self, String> {
         let parts: Vec<&str> = fen.trim().split(" ").collect();
         if parts.len() != 6 {
-            return Err("Not Enough Parts");
+            return Err("Not Enough Parts".to_string());
         }
         let placements: Vec<&str> = parts[0].split("/").collect();
         if placements.len() != 8 {
-            return Err("Not Enough Placements");
+            return Err("Not Enough Placements".to_string());
         }
 
         let mut board = Self::new();
@@ -183,10 +183,64 @@ impl fmt::Display for Board {
     }
 }
 
+impl fmt::Debug for Board {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Board\n")?;
+        for rank in (0..8).rev() {
+            write!(f, "{} ", rank + 1)?;
+            for file in 0..8 {
+                let piece = match self.get_piece(rank, file) {
+                    Piece::Empty => '.',
+                    Piece::Pawn(true) => 'P',
+                    Piece::Pawn(false) => 'p',
+                    Piece::Rook(true) => 'R',
+                    Piece::Rook(false) => 'r',
+                    Piece::Knight(true) => 'N',
+                    Piece::Knight(false) => 'n',
+                    Piece::Bishop(true) => 'B',
+                    Piece::Bishop(false) => 'b',
+                    Piece::Queen(true) => 'Q',
+                    Piece::Queen(false) => 'q',
+                    Piece::King(true) => 'K',
+                    Piece::King(false) => 'k',
+                };
+                write!(f, "{} ", piece)?;
+            }
+            write!(f, "\n")?;
+        }
+        write!(f, "  a b c d e f g h\n")?;
+        writeln!(f, "whites: {}", self.whites)?;
+        writeln!(f, "blacks: {}", self.blacks)?;
+        writeln!(f, "pawns: {}", self.pawns)?;
+        writeln!(f, "rooks: {}", self.rooks)?;
+        writeln!(f, "knights: {}", self.knights)?;
+        writeln!(f, "bishops: {}", self.bishops)?;
+        writeln!(f, "queens: {}", self.queens)?;
+        writeln!(f, "kings: {}", self.kings)?;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_parse() {}
+    fn test_parse() {
+        let start = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1".to_string();
+        let board = Board::parse(&start);
+        match board {
+            Ok(board) => {
+                assert_eq!(board.whites, Bitboard::new(65535));
+                assert_eq!(board.blacks, Bitboard::new(18446462598732840960));
+                assert_eq!(board.pawns, Bitboard::new(71776119061282560));
+                assert_eq!(board.rooks, Bitboard::new(9295429630892703873));
+                assert_eq!(board.knights, Bitboard::new(4755801206503243842));
+                assert_eq!(board.bishops, Bitboard::new(2594073385365405732));
+                assert_eq!(board.queens, Bitboard::new(576460752303423496));
+                assert_eq!(board.kings, Bitboard::new(1152921504606846992));
+            }
+            Err(_) => assert!(false),
+        }
+    }
 }
